@@ -6,7 +6,7 @@ A simple web application that detects and highlights Personally Identifiable Inf
 
 ## 🚀 Demo
 
-![Demo](assets/demo.gif) <!-- Put your demo GIF in the 'assets' folder -->
+![Demo](demo.gif) <!-- Put your demo GIF in the 'assets' folder -->
 
 ---
 
