@@ -1,0 +1,312 @@
+<!-- frontend/chatpage_2.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PrivChat – NER & Local LLM Demo</title>
+  <style>
+    /* ---------- GLOBAL RESET ---------- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #121212;
+      color: #E0E0E0;
+      font-family: "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---------- WINDOW FRAME ---------- */
+    .window {
+      display: flex;
+      flex-direction: column;
+      width: 900px;
+      height: 700px;
+      background: rgba(18, 18, 18, 0.96);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      margin: 50px auto;
+    }
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 50px;
+      background: rgba(30, 30, 30, 0.8);
+      border-bottom: 1px solid #242424;
+    }
+    .title {
+      font-family: "SF Mono", monospace;
+      font-size: 18px;
+      font-weight: 600;
+      color: #00FF66;
+      text-shadow: 0 0 8px rgba(0, 255, 102, 0.6);
+    }
+
+    /* ---------- MAIN CONTENT ---------- */
+    .content {
+      flex: 1;
+      display: flex;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    /* ---------- SIDEBAR ---------- */
+    .sidebar {
+      width: 180px;
+      background: rgba(240, 240, 240, 0.05);
+      border: 1px solid #242424;
+      border-radius: 16px;
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-space-btn {
+      background: rgba(18, 18, 18, 0.8);
+      border: 2px solid #242424;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 0 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #A0A0A0;
+      font-size: 16px;
+      font-weight: 500;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .chat-space-btn:hover {
+      border-color: #00FF66;
+      color: #E0E0E0;
+      transform: translateX(4px);
+    }
+    .chat-space-btn.active {
+      border-color: #00FF66;
+      color: #00FF66;
+      background: rgba(0, 255, 102, 0.1);
+      transform: translateX(4px);
+    }
+    .chat-space-btn.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #00FF66;
+      border-top-right-radius: 2px;
+      border-bottom-right-radius: 2px;
+    }
+
+    /* ---------- CHAT AREA ---------- */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .chat-window {
+      background: rgba(240, 240, 240, 0.05);
+      border: 1px solid #242424;
+      border-radius: 16px;
+      padding: 24px;
+      flex-direction: column;
+      display: flex;
+      gap: 12px;
+      position: relative;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Input & Button */
+    #promptInput {
+      width: 100%;
+      height: 100px;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #E0E0E0;
+      font-size: 16px;
+      padding: 12px;
+      resize: vertical;
+    }
+    #sendBtn {
+      align-self: flex-end;
+      background: #00FF66;
+      color: #121212;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #sendBtn:hover {
+      background: #00e65e;
+    }
+
+    /* Highlighting Entities */
+    .entity-highlight {
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-weight: 600;
+    }
+    .entity-PERSON {
+      background: rgba(255, 165, 0, 0.3);
+      color: #FFA500;
+      border: 1px solid rgba(255, 165, 0, 0.5);
+      box-shadow: 0 0 8px rgba(255, 165, 0, 0.4);
+    }
+    .entity-ORG {
+      background: rgba(0, 191, 255, 0.3);
+      color: #00BFFF;
+      border: 1px solid rgba(0, 191, 255, 0.5);
+      box-shadow: 0 0 8px rgba(0, 191, 255, 0.4);
+    }
+    .entity-GPE {
+      background: rgba(0, 255, 102, 0.3);
+      color: #00FF66;
+      border: 1px solid rgba(0, 255, 102, 0.5);
+      box-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
+    }
+    /* Result Displays */
+    #highlightedPrompt {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 60px;
+      color: #E0E0E0;
+      word-wrap: break-word;
+    }
+    #llmResponse {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 100px;
+      color: #E0E0E0;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <!-- Title Bar -->
+    <div class="titlebar">
+      <div class="title">PrivChat – NER & Local LLM Demo</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+      <!-- Sidebar (placeholder) -->
+      <div class="sidebar">
+        <div class="chat-space-btn active" onclick="selectChatSpace(this, 1)">
+          Chat space 1
+        </div>
+        <div class="chat-space-btn" onclick="selectChatSpace(this, 2)">
+          Chat space 2
+        </div>
+      </div>
+
+      <!-- Chat Container -->
+      <div class="chat-container">
+        <!-- Chat Window -->
+        <div class="chat-window">
+          <label for="promptInput" style="font-size:16px; margin-bottom:4px;">Enter your prompt:</label>
+          <textarea id="promptInput" placeholder="Type something like: &quot;Barack Obama visited Microsoft headquarters in Seattle last week.&quot;"></textarea>
+          <button id="sendBtn">Send</button>
+        </div>
+
+        <!-- Highlighted Prompt -->
+        <div>
+          <div style="font-size:16px; font-weight:500; margin-bottom:4px;">Detected Entities:</div>
+          <div id="highlightedPrompt">— Entities will appear here —</div>
+        </div>
+
+        <!-- LLM Response -->
+        <div>
+          <div style="font-size:16px; font-weight:500; margin-bottom:4px;">LLM Response:</div>
+          <div id="llmResponse">— LLM output will appear here —</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let isPiiDetailsVisible = false;
+    let currentChatSpace = 1;
+
+    function selectChatSpace(element, spaceNumber) {
+      const allButtons = document.querySelectorAll('.chat-space-btn');
+      allButtons.forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+      currentChatSpace = spaceNumber;
+    }
+
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+      const promptInput = document.getElementById("promptInput").value.trim();
+      if (!promptInput) {
+        alert("Please enter a prompt.");
+        return;
+      }
+
+      document.getElementById("highlightedPrompt").innerHTML = "⏳ Processing...";
+      document.getElementById("llmResponse").innerHTML = "⏳ Waiting for LLM...";
+
+      try {
+        const response = await fetch("http://localhost:8000/process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ prompt: promptInput })
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.detail || "Unknown error");
+        }
+        const data = await response.json();
+        const entities = data.entities;           
+        const llmResp = data.llm_response || "";
+
+        let highlightedHTML = "";
+        if (entities.length === 0) {
+          highlightedHTML = promptInput;
+        } else {
+          
+          const entMap = {};
+          entities.forEach(ent => {
+            entMap[ent.text] = ent.label;
+          });
+
+         
+          highlightedHTML = promptInput;
+          entities.forEach(ent => {
+            const label = ent.label;
+            const cssClass = "entity-" + label;
+            const escapedText = ent.text.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+            const regex = new RegExp("\\b" + escapedText + "\\b", "g");
+            highlightedHTML = highlightedHTML.replace(regex, `<span class="entity-highlight ${cssClass}">${ent.text}</span>`);
+          });
+        }
+        document.getElementById("highlightedPrompt").innerHTML = highlightedHTML;
+
+        document.getElementById("llmResponse").textContent = llmResp;
+      } catch (err) {
+        console.error(err);
+        document.getElementById("highlightedPrompt").textContent = "Error during processing.";
+        document.getElementById("llmResponse").textContent = "";
+        alert("Failed to process prompt: " + err.message);
+      }
+    });
+  </script>
+</body>
+</html>
